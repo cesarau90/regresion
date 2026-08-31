@@ -1,0 +1,490 @@
+<title>Predicción de Vivienda CA</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root {
+    --paper: #f2f6f5;
+    --paper-raised: #ffffff;
+    --ink: #16232a;
+    --ink-soft: #47585d;
+    --ink-faint: #7c8c8a;
+    --ocean: #1b6b74;
+    --ocean-strong: #124e56;
+    --ocean-soft: #dcedec;
+    --gold: #a8722f;
+    --gold-soft: #f2e3cd;
+    --line: #d7e0dd;
+    --line-strong: #b9c6c2;
+    --shadow: 0 1px 2px rgba(22,35,42,0.06), 0 8px 24px -12px rgba(22,35,42,0.14);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #10171b;
+      --paper-raised: #172126;
+      --ink: #e7edec;
+      --ink-soft: #a3b3b0;
+      --ink-faint: #71827f;
+      --ocean: #4fb2bc;
+      --ocean-strong: #7fd0d8;
+      --ocean-soft: #1c3438;
+      --gold: #dda863;
+      --gold-soft: #2e2515;
+      --line: #253236;
+      --line-strong: #364446;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 28px -14px rgba(0,0,0,0.55);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #10171b;
+    --paper-raised: #172126;
+    --ink: #e7edec;
+    --ink-soft: #a3b3b0;
+    --ink-faint: #71827f;
+    --ocean: #4fb2bc;
+    --ocean-strong: #7fd0d8;
+    --ocean-soft: #1c3438;
+    --gold: #dda863;
+    --gold-soft: #2e2515;
+    --line: #253236;
+    --line-strong: #364446;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 12px 28px -14px rgba(0,0,0,0.55);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: var(--ocean-soft); color: var(--ocean-strong); }
+
+  h1, h2, h3 { font-family: 'Source Serif 4', Georgia, serif; text-wrap: balance; margin: 0; }
+  code, .mono, .num, td.num, th.num { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+  a { color: var(--ocean-strong); }
+
+  .page { max-width: 980px; margin: 0 auto; padding: 0 24px 96px; }
+
+  /* ---------- Header ---------- */
+  header.hero {
+    padding: 72px 0 44px;
+    border-bottom: 1px solid var(--line);
+  }
+  .eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12.5px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ocean-strong);
+    margin-bottom: 18px;
+  }
+  .eyebrow::before {
+    content: "";
+    width: 7px; height: 7px;
+    background: var(--ocean);
+    border-radius: 50%;
+    display: inline-block;
+  }
+  h1.title {
+    font-size: clamp(2.1rem, 4vw, 3rem);
+    font-weight: 600;
+    line-height: 1.12;
+    max-width: 15ch;
+    color: var(--ink);
+  }
+  .subtitle {
+    margin-top: 18px;
+    max-width: 62ch;
+    font-size: 1.08rem;
+    color: var(--ink-soft);
+  }
+  .factstrip {
+    margin-top: 36px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .fact {
+    background: var(--paper-raised);
+    padding: 16px 18px;
+  }
+  .fact .num {
+    font-size: 1.5rem;
+    font-weight: 500;
+    color: var(--ocean-strong);
+    display: block;
+  }
+  .fact .label {
+    font-size: 0.78rem;
+    color: var(--ink-faint);
+    margin-top: 2px;
+  }
+
+  /* ---------- Section grid (margin-note pattern) ---------- */
+  section.block {
+    display: grid;
+    grid-template-columns: 168px 1fr;
+    gap: 32px;
+    padding: 52px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  section.block:last-of-type { border-bottom: none; }
+  .marginlabel {
+    position: sticky;
+    top: 24px;
+    align-self: start;
+  }
+  .marginlabel .step {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--ink-faint);
+    letter-spacing: 0.04em;
+  }
+  .marginlabel h2 {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--ink);
+    margin-top: 6px;
+    line-height: 1.3;
+  }
+  .content { min-width: 0; }
+  .content > * + * { margin-top: 16px; }
+  .content p { max-width: 66ch; color: var(--ink-soft); }
+  .content p strong { color: var(--ink); font-weight: 600; }
+
+  .lede { font-size: 1.02rem; }
+
+  /* ---------- Stat row (inline within sections) ---------- */
+  .statrow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 18px;
+  }
+  .statchip {
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 0.86rem;
+  }
+  .statchip .v { font-family: 'IBM Plex Mono', monospace; font-weight: 600; color: var(--ocean-strong); margin-right: 6px; }
+  .statchip .k { color: var(--ink-faint); }
+
+  /* ---------- Images ---------- */
+  figure { margin: 22px 0 0; }
+  figure img {
+    width: 100%;
+    display: block;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: var(--paper-raised);
+  }
+  figcaption {
+    margin-top: 10px;
+    font-size: 0.88rem;
+    color: var(--ink-soft);
+    max-width: 68ch;
+  }
+  figcaption .tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--gold);
+    margin-right: 8px;
+  }
+
+  .imggrid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 720px) { .imggrid { grid-template-columns: 1fr; } }
+
+  /* ---------- Tables ---------- */
+  .tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--paper-raised); }
+  table { border-collapse: collapse; width: 100%; font-size: 0.92rem; min-width: 480px; }
+  th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { font-family: 'IBM Plex Mono', monospace; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-faint); font-weight: 500; }
+  tbody tr:last-child td { border-bottom: none; }
+  td.num, th.num { text-align: right; }
+  tr.winner td { background: var(--ocean-soft); }
+  tr.winner td:first-child { position: relative; font-weight: 600; color: var(--ocean-strong); }
+  .badge {
+    display: inline-block;
+    margin-left: 8px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.68rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    background: var(--ocean);
+    color: var(--paper-raised);
+    padding: 2px 7px;
+    border-radius: 999px;
+    vertical-align: middle;
+  }
+
+  /* ---------- Code ---------- */
+  pre {
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px 18px;
+    overflow-x: auto;
+    font-size: 0.84rem;
+    line-height: 1.55;
+  }
+  pre code { color: var(--ink-soft); }
+  pre .kw { color: var(--ocean-strong); }
+  pre .s { color: var(--gold); }
+
+  /* ---------- Prediction card ---------- */
+  .predictcard {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 24px;
+    align-items: center;
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 22px 24px;
+    box-shadow: var(--shadow);
+  }
+  .predictcard .specs { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px 20px; font-size: 0.85rem; }
+  .predictcard .specs div span.k { color: var(--ink-faint); display: block; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  .predictcard .specs div span.v { font-family: 'IBM Plex Mono', monospace; color: var(--ink); }
+  .predictcard .result { text-align: right; border-left: 1px solid var(--line); padding-left: 24px; }
+  .predictcard .result .k { font-size: 0.75rem; color: var(--ink-faint); text-transform: uppercase; letter-spacing: 0.05em; }
+  .predictcard .result .v { font-family: 'IBM Plex Mono', monospace; font-size: 1.8rem; font-weight: 600; color: var(--ocean-strong); white-space: nowrap; }
+  @media (max-width: 640px) {
+    .predictcard { grid-template-columns: 1fr; }
+    .predictcard .result { border-left: none; text-align: left; padding-left: 0; border-top: 1px solid var(--line); padding-top: 16px; }
+  }
+
+  /* ---------- Conclusion ---------- */
+  .conclusion {
+    border-left: 3px solid var(--gold);
+    padding-left: 22px;
+    font-family: 'Source Serif 4', serif;
+    font-size: 1.18rem;
+    line-height: 1.65;
+    color: var(--ink);
+    max-width: 70ch;
+  }
+
+  footer {
+    padding: 40px 0 0;
+    color: var(--ink-faint);
+    font-size: 0.82rem;
+  }
+  footer .mono { font-family: 'IBM Plex Mono', monospace; }
+
+  @media (max-width: 720px) {
+    section.block { grid-template-columns: 1fr; gap: 10px; }
+    .marginlabel { position: static; display: flex; align-items: baseline; gap: 10px; }
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    section.block, header.hero { }
+  }
+</style>
+
+<div class="page">
+
+  <header class="hero">
+    <div class="eyebrow">Analítica predictiva &middot; Aprendizaje supervisado</div>
+    <h1 class="title">Predicción de precios de vivienda en California</h1>
+    <p class="subtitle">Proyecto de regresión que estima el valor mediano de vivienda por distrito censal a partir de ingreso, ubicación y composición del hogar, comparando cuatro modelos entrenados sobre el mismo pipeline de preprocesamiento.</p>
+    <div class="factstrip">
+      <div class="fact"><span class="num">20,640</span><span class="label">distritos censales</span></div>
+      <div class="fact"><span class="num">9</span><span class="label">variables predictoras</span></div>
+      <div class="fact"><span class="num">$14,999&ndash;$500,001</span><span class="label">rango del precio objetivo</span></div>
+      <div class="fact"><span class="num">R&sup2; 0.789</span><span class="label">mejor modelo (Random Forest)</span></div>
+    </div>
+  </header>
+
+  <section class="block">
+    <div class="marginlabel">
+      <div class="step">01</div>
+      <h2>Dataset</h2>
+    </div>
+    <div class="content">
+      <p class="lede">Se usó el conjunto <strong>California Housing</strong> (censo de EE.UU. de 1990, distribuido públicamente por Aurélien Géron), cargado directamente por URL sin necesidad de credenciales de Kaggle.</p>
+      <p>Cada fila describe un distrito censal: ubicación geográfica, antigüedad de las viviendas, número de habitaciones/dormitorios, población, hogares, ingreso mediano y una categoría de cercanía al mar (<code>ocean_proximity</code>). La variable objetivo es <code>median_house_value</code>.</p>
+      <div class="statrow">
+        <div class="statchip"><span class="v">&lt;1H OCEAN</span><span class="k">9,136 distritos</span></div>
+        <div class="statchip"><span class="v">INLAND</span><span class="k">6,551</span></div>
+        <div class="statchip"><span class="v">NEAR OCEAN</span><span class="k">2,658</span></div>
+        <div class="statchip"><span class="v">NEAR BAY</span><span class="k">2,290</span></div>
+        <div class="statchip"><span class="v">ISLAND</span><span class="k">5</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="marginlabel">
+      <div class="step">02</div>
+      <h2>Ingesta e inspección</h2>
+    </div>
+    <div class="content">
+      <p>Antes de modelar se revisó la calidad de los datos crudos:</p>
+      <div class="statrow">
+        <div class="statchip"><span class="v">20,640 &times; 10</span><span class="k">shape original</span></div>
+        <div class="statchip"><span class="v">207</span><span class="k">nulos en total_bedrooms</span></div>
+        <div class="statchip"><span class="v">0</span><span class="k">filas duplicadas</span></div>
+        <div class="statchip"><span class="v">9 num &middot; 1 cat</span><span class="k">tipos de columna</span></div>
+      </div>
+      <p>Los nulos se concentran en una sola columna numérica (menos del 1% de las filas), por lo que una imputación simple es suficiente &mdash; se resuelve dentro del pipeline, no aquí, para no filtrar información del set de prueba.</p>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="marginlabel">
+      <div class="step">03</div>
+      <h2>Análisis exploratorio</h2>
+    </div>
+    <div class="content">
+      <figure>
+        <img src="data:image/png;base64,__IMG_HIST__" alt="Histograma del precio de vivienda">
+        <figcaption><span class="tag">Hallazgo</span>La distribución del precio tiene sesgo a la derecha y un pico artificial exactamente en $500,001: el dataset original censura ahí los valores más altos en vez de reportar el precio real.</figcaption>
+      </figure>
+      <figure>
+        <img src="data:image/png;base64,__IMG_CORR__" alt="Matriz de correlación de variables numéricas">
+        <figcaption><span class="tag">Hallazgo</span><code>median_income</code> es, por lejos, la variable más correlacionada con el precio (r&nbsp;=&nbsp;0.688). <code>total_rooms</code>, <code>households</code> y <code>population</code> están fuertemente correlacionadas entre sí &mdash; multicolinealidad esperable en variables de tamaño de distrito.</figcaption>
+      </figure>
+      <figure>
+        <img src="data:image/png;base64,__IMG_EDA__" alt="Ingreso mediano vs precio, y precio por proximidad al mar">
+        <figcaption><span class="tag">Hallazgo</span>La relación ingreso&ndash;precio es positiva y razonablemente lineal, lo que justifica probar una regresión lineal como base. La cercanía al mar también segmenta el precio: <code>ISLAND</code> y <code>NEAR BAY</code> superan claramente a <code>INLAND</code>.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="marginlabel">
+      <div class="step">04</div>
+      <h2>Limpieza</h2>
+    </div>
+    <div class="content">
+      <p>No hubo duplicados que eliminar. Para outliers se calculó el rango intercuartílico del precio (límite superior IQR &asymp; $482,412), pero la decisión final se basó en conocimiento del dominio, no solo en el estadístico:</p>
+      <div class="statrow">
+        <div class="statchip"><span class="v">965 filas</span><span class="k">eliminadas por censura en $500,001</span></div>
+        <div class="statchip"><span class="v">0 filas</span><span class="k">recortadas en otras variables</span></div>
+      </div>
+      <p>Se eliminó únicamente el valor exacto $500,001 por ser un artefacto de censura de datos, no un precio real. El resto de outliers estadísticos (distritos muy densos o muy grandes) se conservó: Random Forest y Árbol de Decisión son robustos a ellos, y recortarlos habría descartado información real.</p>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="marginlabel">
+      <div class="step">05&ndash;06</div>
+      <h2>Pipeline y split</h2>
+    </div>
+    <div class="content">
+      <p>El escalado, la imputación y el One-Hot Encoding viven dentro de un <code>ColumnTransformer</code>, ajustado únicamente sobre el 80% de entrenamiento (<code>random_state=42</code>). Así el modelo nunca ve estadísticos calculados con datos de prueba.</p>
+      <pre><code><span class="kw">numeric</span> &rarr; SimpleImputer(mediana) &rarr; StandardScaler
+<span class="kw">categórica</span> (ocean_proximity) &rarr; SimpleImputer(moda) &rarr; OneHotEncoder</code></pre>
+      <div class="statrow">
+        <div class="statchip"><span class="v">15,740</span><span class="k">filas de entrenamiento</span></div>
+        <div class="statchip"><span class="v">3,935</span><span class="k">filas de prueba</span></div>
+        <div class="statchip"><span class="v">80 / 20</span><span class="k">proporción del split</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="marginlabel">
+      <div class="step">07&ndash;08</div>
+      <h2>Modelos y evaluación</h2>
+    </div>
+    <div class="content">
+      <p>Se entrenaron cuatro variantes sobre el mismo pipeline y se evaluaron en el 20% de prueba, nunca visto durante el entrenamiento.</p>
+      <div class="tablewrap">
+        <table>
+          <thead>
+            <tr><th>Modelo</th><th class="num">MAE</th><th class="num">RMSE</th><th class="num">R&sup2;</th></tr>
+          </thead>
+          <tbody>
+            <tr class="winner"><td>Random Forest<span class="badge">mejor</span></td><td class="num">$30,624</td><td class="num">$45,855</td><td class="num">0.789</td></tr>
+            <tr><td>Random Forest (afinado&nbsp;&middot;&nbsp;GridSearchCV)</td><td class="num">$31,911</td><td class="num">$46,821</td><td class="num">0.780</td></tr>
+            <tr><td>Regresión Lineal</td><td class="num">$45,917</td><td class="num">$62,562</td><td class="num">0.607</td></tr>
+            <tr><td>Árbol de Decisión</td><td class="num">$41,843</td><td class="num">$63,065</td><td class="num">0.601</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="statrow">
+        <div class="statchip"><span class="v">MAE</span><span class="k">error promedio en dólares &mdash; más bajo es mejor</span></div>
+        <div class="statchip"><span class="v">RMSE</span><span class="k">como MAE pero penaliza fuerte los errores grandes</span></div>
+        <div class="statchip"><span class="v">R&sup2;</span><span class="k">% de la variación del precio que explica el modelo</span></div>
+      </div>
+      <p><strong>Nota honesta:</strong> el ajuste de hiperparámetros con <code>GridSearchCV</code> (5-fold, 54 combinaciones sobre <code>n_estimators</code>, <code>max_depth</code>, <code>min_samples_split</code>, <code>max_features</code>) no superó al Random Forest con parámetros por defecto en el set de prueba &mdash; quedó ligeramente por debajo. Es evidencia real de que optimizar por validación cruzada en train no siempre mejora la generalización.</p>
+      <div class="imggrid">
+        <figure>
+          <img src="data:image/png;base64,__IMG_RESID__" alt="Real vs predicho y residuales del mejor modelo" style="max-width:none; width:auto; height:auto;">
+        </figure>
+      </div>
+      <figcaption><span class="tag">Lectura</span>En "real vs. predicho", los puntos deberían pegarse a la diagonal roja; la dispersión creciente en precios altos muestra que el modelo pierde precisión ahí &mdash; efecto residual de haber quitado los valores censurados en $500,001. En los residuales, la nube sin patrón claro alrededor de cero es buena señal; la leve asimetría hacia residuales negativos en precios altos indica una tendencia a subestimar las viviendas más caras.</figcaption>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="marginlabel">
+      <div class="step">09</div>
+      <h2>Interpretación</h2>
+    </div>
+    <div class="content">
+      <p>Importancia de variables del Random Forest ganador &mdash; qué tanto pesa cada una en la reducción de error del modelo:</p>
+      <figure>
+        <img src="data:image/png;base64,__IMG_FEAT__" alt="Importancia de variables del Random Forest">
+      </figure>
+      <p><code>median_income</code> concentra el <strong>43%</strong> de la importancia total, muy por encima de cualquier otra variable. La categoría <code>ocean_proximity_INLAND</code> (16%) y la ubicación geográfica (<code>longitude</code>/<code>latitude</code>, ~12% cada una) confirman que <strong>cuánto gana la gente</strong> y <strong>dónde está el distrito</strong> son, juntas, la historia casi completa detrás del precio.</p>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="marginlabel">
+      <div class="step">10</div>
+      <h2>Predicción de ejemplo</h2>
+    </div>
+    <div class="content">
+      <p>La función <code>predecir_precio()</code> recibe las características de un distrito nuevo y devuelve el precio estimado por el modelo ganador:</p>
+      <div class="predictcard">
+        <div class="specs">
+          <div><span class="k">Ubicación</span><span class="v">-122.23, 37.88</span></div>
+          <div><span class="k">Proximidad</span><span class="v">NEAR BAY</span></div>
+          <div><span class="k">Ingreso mediano</span><span class="v">8.3252 (&times;$10k)</span></div>
+          <div><span class="k">Antigüedad</span><span class="v">41 años</span></div>
+          <div><span class="k">Habitaciones tot.</span><span class="v">880</span></div>
+          <div><span class="k">Hogares</span><span class="v">126</span></div>
+        </div>
+        <div class="result">
+          <div class="k">Precio estimado</div>
+          <div class="v">$392,675</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block">
+    <div class="marginlabel">
+      <div class="step">11</div>
+      <h2>Conclusión</h2>
+    </div>
+    <div class="content">
+      <p class="conclusion">Random Forest fue el modelo con mejor desempeño (R&sup2;&nbsp;=&nbsp;0.789, error promedio de ~$30,600), superando con claridad a la regresión lineal base gracias a su capacidad de capturar relaciones no lineales entre ingreso, ubicación y precio. El ajuste fino de hiperparámetros no mejoró el resultado sobre el modelo por defecto, señal de que el tipo de algoritmo importó más que su calibración. El proyecto tiene límites reales: los datos son del censo de 1990, faltan variables relevantes como estado de la vivienda o metros cuadrados exactos, y el modelo pierde precisión en el extremo superior de precios por el artefacto de censura del dataset original.</p>
+    </div>
+  </section>
+
+  <footer>
+    <p class="mono">Pipeline sin data leakage &middot; escalado, imputación y encoding ajustados solo con el 80% de entrenamiento &middot; random_state=42</p>
+  </footer>
+
+</div>
