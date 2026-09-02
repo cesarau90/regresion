@@ -19,6 +19,16 @@ pip install pandas numpy matplotlib seaborn scikit-learn
 python proyecto_regresion.py
 ```
 
+### Aplicación interactiva
+
+```bash
+pip install -r requirements.txt
+python entrenar_modelo.py
+python app.py
+```
+
+Abre `http://127.0.0.1:5000`. El entrenamiento crea `modelo_vivienda.joblib`; las consultas posteriores reutilizan ese archivo y no vuelven a entrenar el modelo.
+
 El script (celdas separadas con `# %%`, corribles individualmente en VS Code/Jupyter) genera las gráficas `01`–`05` en `.png`, `resultados_modelos.csv` y las métricas en consola.
 
 ## Pipeline
