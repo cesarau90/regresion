@@ -29,6 +29,10 @@ python app.py
 
 Abre `http://127.0.0.1:5000`. El entrenamiento crea `modelo_vivienda.joblib`; las consultas posteriores reutilizan ese archivo y no vuelven a entrenar el modelo.
 
+### Deploy en Vercel
+
+Vercel ejecuta `entrenar_modelo.py` durante el build, incluye el modelo generado en la función Flask y dirige las rutas a `app.py`. No subas `modelo_vivienda.joblib` a Git; después de hacer push de `vercel.json` y `.python-version`, vuelve a desplegar sin reutilizar el caché anterior.
+
 El script (celdas separadas con `# %%`, corribles individualmente en VS Code/Jupyter) genera las gráficas `01`–`05` en `.png`, `resultados_modelos.csv` y las métricas en consola.
 
 ## Pipeline
