@@ -38,7 +38,10 @@ def main():
     ])
     pipeline = Pipeline([
         ("preprocessor", preprocessor),
-        ("modelo", RandomForestRegressor(n_estimators=200, random_state=42, n_jobs=-1)),
+        ("modelo", RandomForestRegressor(
+            n_estimators=120, max_depth=18, min_samples_leaf=2,
+            random_state=42, n_jobs=-1,
+        )),
     ])
 
     X_train, X_test, y_train, y_test = train_test_split(
