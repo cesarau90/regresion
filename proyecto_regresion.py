@@ -10,15 +10,18 @@ matplotlib.use("Agg")  # para guardar gráficas a archivo sin necesitar pantalla
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.model_selection import train_test_split, GridSearchCV, cross_val_score
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler, OneHotEncoder
+from sklearn.preprocessing import StandardScaler, OneHotEncoder, FunctionTransformer
 from sklearn.impute import SimpleImputer
+from sklearn.inspection import permutation_importance
 from sklearn.linear_model import LinearRegression
 from sklearn.tree import DecisionTreeRegressor
-from sklearn.ensemble import RandomForestRegressor
+from sklearn.ensemble import RandomForestRegressor, HistGradientBoostingRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+
+from features import RAW_NUMERIC, RATIO_FEATURES, add_ratio_features
 
 sns.set_style("whitegrid")
 
@@ -79,11 +82,15 @@ print("Filas con valor == 500001 (tope censurado):", (df["median_house_value"] =
 df = df[df["median_house_value"] != 500001]
 print("Shape final:", df.shape)
 
-# %% Celda 10 — Preprocesamiento dentro de un ColumnTransformer
+# %% Celda 10 — Feature engineering + preprocesamiento dentro del pipeline
 X = df.drop(columns=["median_house_value"])
 y = df["median_house_value"]
 
-numeric_features = X.select_dtypes(include=np.number).columns.tolist()
+# Ratios por distrito: habitaciones y dormitorios por hogar y ocupación media.
+# Son operaciones fila a fila, así que van dentro del pipeline sin data leakage.
+# (definidos en features.py para compartirlos con la API)
+feature_engineer = FunctionTransformer(add_ratio_features)
+numeric_features = RAW_NUMERIC + RATIO_FEATURES
 categorical_features = ["ocean_proximity"]
 
 numeric_transformer = Pipeline(steps=[
@@ -101,6 +108,14 @@ preprocessor = ColumnTransformer(transformers=[
     ("cat", categorical_transformer, categorical_features),
 ])
 
+def construir_pipeline(modelo):
+    """Pipeline completo: ratios -> imputación/escalado/encoding -> modelo."""
+    return Pipeline(steps=[
+        ("features", feature_engineer),
+        ("preprocessor", preprocessor),
+        ("modelo", modelo),
+    ])
+
 # %% Celda 11 — División train/test
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 print("Train:", X_train.shape, "Test:", X_test.shape)
@@ -110,26 +125,40 @@ modelos = {
     "Regresión Lineal": LinearRegression(),
     "Árbol de Decisión": DecisionTreeRegressor(random_state=42),
     "Random Forest": RandomForestRegressor(n_estimators=200, random_state=42),
+    "Gradient Boosting": HistGradientBoostingRegressor(random_state=42),
 }
 
 pipelines = {}
 for nombre, modelo in modelos.items():
-    pipe = Pipeline(steps=[("preprocessor", preprocessor), ("modelo", modelo)])
+    pipe = construir_pipeline(modelo)
     pipe.fit(X_train, y_train)
     pipelines[nombre] = pipe
     print(f"{nombre} entrenado")
 
-# %% Celda 13 — Tabla comparativa de métricas
+# %% Celda 13 — Tabla comparativa: validación cruzada (train) + set de prueba
+# La CV de 5 folds sobre train da una estimación con incertidumbre y evita
+# concluir a partir de un único split. El set de prueba queda como juez final.
 resultados = []
 for nombre, pipe in pipelines.items():
+    cv_rmse = -cross_val_score(
+        pipe, X_train, y_train, cv=5,
+        scoring="neg_root_mean_squared_error", n_jobs=-1,
+    )
     y_pred = pipe.predict(X_test)
     mae = mean_absolute_error(y_test, y_pred)
     rmse = np.sqrt(mean_squared_error(y_test, y_pred))
     r2 = r2_score(y_test, y_pred)
-    resultados.append({"Modelo": nombre, "MAE": mae, "RMSE": rmse, "R2": r2})
+    resultados.append({
+        "Modelo": nombre,
+        "CV_RMSE_medio": cv_rmse.mean(),
+        "CV_RMSE_std": cv_rmse.std(),
+        "MAE": mae,
+        "RMSE": rmse,
+        "R2": r2,
+    })
 
 df_resultados = pd.DataFrame(resultados).sort_values("R2", ascending=False)
-print(df_resultados)
+print(df_resultados.to_string(index=False))
 
 # %% Celda 14 — Gráficas: valores reales vs predichos, y residuales (mejor modelo)
 mejor_nombre = df_resultados.iloc[0]["Modelo"]
@@ -153,25 +182,27 @@ plt.tight_layout()
 plt.savefig("04_real_vs_predicho_residuales.png", dpi=120, bbox_inches="tight")
 plt.close()
 
-# %% Celda 15 — Feature importances del mejor modelo
-if hasattr(mejor_pipe.named_steps["modelo"], "feature_importances_"):
-    nombres_features = mejor_pipe.named_steps["preprocessor"].get_feature_names_out()
-    importancias = mejor_pipe.named_steps["modelo"].feature_importances_
+# %% Celda 15 — Importancia por permutación del mejor modelo
+# Model-agnóstico (sirve igual para Random Forest o Gradient Boosting) y se mide
+# sobre el set de prueba: cuánto empeora el R² al barajar cada variable de entrada.
+perm = permutation_importance(
+    mejor_pipe, X_test, y_test, n_repeats=10, random_state=42, n_jobs=-1
+)
+df_importancias = pd.DataFrame({
+    "Variable": X_test.columns,
+    "Importancia": perm.importances_mean,
+    "std": perm.importances_std,
+}).sort_values("Importancia", ascending=False).head(10)
 
-    df_importancias = pd.DataFrame({
-        "Variable": nombres_features,
-        "Importancia": importancias,
-    }).sort_values("Importancia", ascending=False).head(10)
-
-    plt.figure(figsize=(8, 6))
-    sns.barplot(data=df_importancias, x="Importancia", y="Variable")
-    plt.title(f"Top 10 variables más importantes ({mejor_nombre})")
-    plt.tight_layout()
-    plt.savefig("05_feature_importances.png", dpi=120, bbox_inches="tight")
-    plt.close()
-    print(df_importancias)
-else:
-    print(f"{mejor_nombre} no expone feature_importances_ directamente.")
+orden = df_importancias.iloc[::-1]
+plt.figure(figsize=(8, 6))
+plt.barh(orden["Variable"], orden["Importancia"], xerr=orden["std"], color="#1b6b74")
+plt.title(f"Importancia por permutación ({mejor_nombre})")
+plt.xlabel("Caída media de R² al permutar la variable")
+plt.tight_layout()
+plt.savefig("05_feature_importances.png", dpi=120, bbox_inches="tight")
+plt.close()
+print(df_importancias)
 
 # %% Celda 16 — Función para predecir un caso nuevo
 def predecir_precio(pipe, **caracteristicas):
@@ -192,13 +223,15 @@ print(f"Precio estimado: ${precio_estimado:,.2f}")
 print(df_resultados.to_string(index=False))
 
 # %% Celda 18 — GridSearchCV para afinar Random Forest
-pipe_rf = Pipeline(steps=[("preprocessor", preprocessor), ("modelo", RandomForestRegressor(random_state=42))])
+# Búsqueda centrada alrededor de los valores por defecto (que fueron competitivos),
+# no en profundidades bajas que solo regularizan de más.
+pipe_rf = construir_pipeline(RandomForestRegressor(random_state=42, n_jobs=-1))
 
 param_grid = {
-    "modelo__n_estimators": [100, 200, 400],
-    "modelo__max_depth": [None, 10, 20],
-    "modelo__min_samples_split": [2, 5, 10],
-    "modelo__max_features": ["sqrt", "log2"],
+    "modelo__n_estimators": [200, 400],
+    "modelo__max_depth": [None, 30],
+    "modelo__min_samples_leaf": [1, 2, 4],
+    "modelo__max_features": [1.0, "sqrt"],
 }
 
 grid_search = GridSearchCV(
@@ -221,12 +254,21 @@ mae_tuned = mean_absolute_error(y_test, y_pred_tuned)
 rmse_tuned = np.sqrt(mean_squared_error(y_test, y_pred_tuned))
 r2_tuned = r2_score(y_test, y_pred_tuned)
 
+cv_rmse_tuned = -cross_val_score(
+    mejor_rf_tuned, X_train, y_train, cv=5,
+    scoring="neg_root_mean_squared_error", n_jobs=-1,
+)
 df_resultados = pd.concat([
     df_resultados,
-    pd.DataFrame([{"Modelo": "Random Forest (afinado)", "MAE": mae_tuned, "RMSE": rmse_tuned, "R2": r2_tuned}]),
+    pd.DataFrame([{
+        "Modelo": "Random Forest (afinado)",
+        "CV_RMSE_medio": cv_rmse_tuned.mean(),
+        "CV_RMSE_std": cv_rmse_tuned.std(),
+        "MAE": mae_tuned, "RMSE": rmse_tuned, "R2": r2_tuned,
+    }]),
 ], ignore_index=True).sort_values("R2", ascending=False)
 
-print(df_resultados)
+print(df_resultados.to_string(index=False))
 
 # %% Celda 20 — Guardar tabla final de resultados a CSV
 df_resultados.to_csv("resultados_modelos.csv", index=False)

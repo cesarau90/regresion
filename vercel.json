@@ -3,7 +3,7 @@
   "buildCommand": "python entrenar_modelo.py",
   "functions": {
     "app.py": {
-      "includeFiles": "modelo_vivienda.joblib",
+      "includeFiles": "{modelo_vivienda.joblib,features.py,mapa.json}",
       "maxDuration": 60
     }
   },

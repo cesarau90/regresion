@@ -45,16 +45,13 @@ def predecir():
         return jsonify(error="Hay valores inválidos en el formulario."), 400
 
     frame = pd.DataFrame([row], columns=FEATURES)
-    pipeline = artifact["pipeline"]
-    estimate = float(pipeline.predict(frame)[0])
+    estimate = float(artifact["pipeline"].predict(frame)[0])
 
-    # Dispersión entre árboles: referencia visual, no intervalo estadístico calibrado.
-    transformed = pipeline.named_steps["preprocessor"].transform(frame)
-    tree_predictions = np.array([
-        tree.predict(transformed)[0]
-        for tree in pipeline.named_steps["modelo"].estimators_
-    ])
-    low, high = np.percentile(tree_predictions, [10, 90])
+    # Intervalo orientativo P10-P90 por regresión cuantílica (dos modelos aparte).
+    # Es una referencia de dispersión, no un intervalo de confianza calibrado.
+    low = float(artifact["pipeline_low"].predict(frame)[0])
+    high = float(artifact["pipeline_high"].predict(frame)[0])
+    low, high = min(low, high), max(low, high)
 
     warnings = []
     for name, limits in artifact["metadata"]["ranges"].items():
